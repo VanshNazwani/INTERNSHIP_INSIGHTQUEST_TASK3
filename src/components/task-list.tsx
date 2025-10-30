@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/componentsui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSocket } from '@/hooks/use-socket';
 import type { Project, Task, TaskStatus, User } from '@/lib/data';
 import { users } from '@/lib/data';

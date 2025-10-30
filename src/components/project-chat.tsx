@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/componentsui/scroll-area';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send } from 'lucide-react';
 import { useSocket } from '@/hooks/use-socket';
 import { cn } from '@/lib/utils';
