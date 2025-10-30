@@ -11,7 +11,7 @@ import { projects as initialProjects, users as allUsers } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare } from 'lucide-react';
 
-export default function KarmaSphereDashboard() {
+export default function NotifyHubDashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
 
@@ -54,7 +54,7 @@ export default function KarmaSphereDashboard() {
                 <Card className="w-full max-w-md text-center">
                   <CardContent className="p-10">
                     <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h2 className="mt-4 text-2xl font-semibold">Welcome to KarmaSphere</h2>
+                    <h2 className="mt-4 text-2xl font-semibold">Welcome to NotifyHub</h2>
                     <p className="mt-2 text-muted-foreground">
                       Select a project from the sidebar to view tasks and start communicating with your team.
                     </p>

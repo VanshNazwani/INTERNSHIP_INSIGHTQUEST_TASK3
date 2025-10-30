@@ -2,7 +2,7 @@ import { Server as NetServer } from 'http';
 import type { NextApiRequest } from 'next';
 import { Server as ServerIO } from 'socket.io';
 import type { NextApiResponseServerIO } from '@/types';
-import { addMessageToProject, assignTaskToUser, updateTaskStatus, users, addNotification as addNotificationToDb, projects } from '@/lib/data';
+import { addMessageToProject, assignTaskToUser, updateTaskStatus, users, addNotification as addNotificationToDb, projects, createTaskInProject } from '@/lib/data';
 
 export const config = {
   api: {
@@ -43,6 +43,33 @@ const socketio = async (req: NextApiRequest, res: NextApiResponseServerIO) => {
                 io.to(member.id).emit('notification', notif);
               }
            })
+        }
+      });
+      
+      socket.on('createTask', (data) => {
+        const { projectId, title, description, createdByUserId } = data;
+        const newTask = {
+          id: `task-${Date.now()}`,
+          title,
+          description,
+          status: 'todo' as const,
+          assignedTo: undefined,
+        };
+        const createdTask = createTaskInProject(projectId, newTask);
+        const project = projects.find(p => p.id === projectId);
+        const createdByUser = users.find(u => u.id === createdByUserId);
+
+        if (createdTask && project && createdByUser) {
+          io.to(projectId).emit('taskCreated', { projectId, task: createdTask });
+
+          project.members.forEach(memberId => {
+            const member = users.find(u => u.id === memberId);
+            if (member && member.id !== createdByUser.id) {
+              const notif = { id: `notif-${Date.now()}`, text: `New task "${createdTask.title}" created in ${project.name} by ${createdByUser.name}`, timestamp: Date.now(), read: false };
+              addNotificationToDb(notif);
+              io.to(member.id).emit('notification', notif);
+            }
+          })
         }
       });
 

@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'KarmaSphere',
+  title: 'NotifyHub',
   description: 'Real-time communication and activity updates for your team.',
 };
 

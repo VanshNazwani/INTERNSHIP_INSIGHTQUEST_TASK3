@@ -38,7 +38,7 @@ export type Notification = {
 };
 
 export const users: User[] = [
-  { id: 'user-1', name: 'Priya Patel', avatarUrl: 'https://picsum.photos/seed/101/40/40', role: 'manager' },
+  { id: 'user-1', name: 'Vansh Nazwani', avatarUrl: 'https://picsum.photos/seed/101/40/40', role: 'manager' },
   { id: 'user-2', name: 'Rohan Sharma', avatarUrl: 'https://picsum.photos/seed/102/40/40', role: 'member' },
   { id: 'user-3', name: 'Anjali Singh', avatarUrl: 'https://picsum.photos/seed/103/40/40', role: 'member' },
   { id: 'user-4', name: 'Vikram Kumar', avatarUrl: 'https://picsum.photos/seed/104/40/40', role: 'manager' },
@@ -84,7 +84,7 @@ export let projects: Project[] = [
 ];
 
 export let notifications: Notification[] = [
-    {id: 'notif-1', text: "Welcome to KarmaSphere!", timestamp: Date.now() - 100000, read: true}
+    {id: 'notif-1', text: "Welcome to NotifyHub!", timestamp: Date.now() - 100000, read: true}
 ];
 
 // Helper functions to manipulate in-memory data
@@ -94,6 +94,15 @@ export const addMessageToProject = (projectId: string, message: Message) => {
     project.messages.push(message);
   }
 };
+
+export const createTaskInProject = (projectId: string, task: Task) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+        project.tasks.push(task);
+        return task;
+    }
+    return null;
+}
 
 export const updateTaskStatus = (projectId: string, taskId: string, status: TaskStatus) => {
     const project = projects.find(p => p.id === projectId);

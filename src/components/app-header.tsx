@@ -34,7 +34,7 @@ export function AppHeader({ currentUser }: AppHeaderProps) {
                 <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M22 12C22 6.47715 17.5228 2 12 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <h1 className="font-headline text-xl font-bold tracking-tight">KarmaSphere</h1>
+            <h1 className="font-headline text-xl font-bold tracking-tight">NotifyHub</h1>
         </div>
         <div className="ml-auto flex items-center gap-4">
           <NotificationsPopover currentUser={currentUser} />
