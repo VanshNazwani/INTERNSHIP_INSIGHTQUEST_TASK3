@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { useFirebase, initiateEmailSignIn } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -17,6 +16,13 @@ export default function LoginPage() {
   const { auth, user, isUserLoading } = useFirebase();
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      const from = searchParams.get('from');
+      router.replace(from || '/');
+    }
+  }, [user, isUserLoading, router, searchParams]);
 
   const handleLogin = () => {
     if (auth) {
@@ -33,18 +39,12 @@ export default function LoginPage() {
     }
   };
   
-  if (isUserLoading) {
+  if (isUserLoading || user) {
     return (
         <div className="flex h-screen w-full items-center justify-center bg-background">
           <div>Loading...</div>
         </div>
     );
-  }
-  
-  if (user) {
-    const from = searchParams.get('from');
-    router.replace(from || '/');
-    return null;
   }
 
   return (

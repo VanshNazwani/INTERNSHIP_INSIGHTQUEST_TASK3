@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,12 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const { auth, firestore, user, isUserLoading } = useFirebase();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.replace('/');
+    }
+  }, [user, isUserLoading, router]);
   
   const handleSignUp = async () => {
     if (auth && firestore) {
@@ -35,20 +41,19 @@ export default function SignupPage() {
             email: user.email,
         });
 
-        router.push('/');
+        // No need to redirect here, the useEffect will handle it
       } catch (error: any) {
         setError(error.message);
       }
     }
   };
 
-  if (isUserLoading) {
-    return <div>Loading...</div>;
-  }
-  
-  if (user) {
-    router.replace('/');
-    return null;
+  if (isUserLoading || user) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+          <div>Loading...</div>
+        </div>
+    );
   }
 
   return (
@@ -59,15 +64,15 @@ export default function SignupPage() {
           <CardDescription>Enter your information to create an account.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="grid gap-2">
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="username">Username</Label>
             <Input id="username" type="text" placeholder="Priya Patel" required value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
-          <div className="grid gap-2">
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          <div className="grid gap-2">
+          <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
