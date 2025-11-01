@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project, Message } from '@/lib/data';
-import { useCollection, useFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, addDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 
@@ -22,7 +22,7 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  const { firestore, useMemoFirebase } = useFirebase();
+  const { firestore } = useFirebase();
 
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore) return null;

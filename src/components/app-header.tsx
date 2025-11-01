@@ -16,19 +16,21 @@ import { PreferencesDialog } from './preferences-dialog';
 import { NotificationsPopover } from './notifications-popover';
 import { AppSidebar } from './app-sidebar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
-import { useCollection } from '@/firebase';
 import type { Project } from '@/lib/data';
 
 export function AppHeader() {
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
   const { user, firestore } = useFirebase();
 
-  const projectsQuery = firestore ? collection(firestore, 'projects') : null;
+  const projectsQuery = useMemoFirebase(() => 
+    firestore ? collection(firestore, 'projects') : null, 
+    [firestore]
+  );
   const { data: projects } = useCollection<Project>(projectsQuery);
 
-  const userInitials = user?.displayName?.split(' ').map(n => n[0]).join('') || '';
+  const userInitials = user?.displayName?.split(' ').map(n => n[0]).join('') || user?.email?.charAt(0).toUpperCase() || '?';
 
   return (
     <>
@@ -62,7 +64,7 @@ export function AppHeader() {
                   <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || ''} />
                   <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
-                <span className="hidden md:inline">{user?.displayName}</span>
+                <span className="hidden md:inline">{user?.displayName || user?.email}</span>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>

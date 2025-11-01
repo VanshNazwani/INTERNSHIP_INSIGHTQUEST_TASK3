@@ -8,15 +8,18 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { type Notification } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
-import { useCollection, useFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { useCollection, useFirebase, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
 export function NotificationsPopover({ currentUser }: {currentUser: User}) {
   const [isOpen, setIsOpen] = useState(false);
   const { firestore } = useFirebase();
 
-  const notificationsQuery = firestore ? query(collection(firestore, 'users', currentUser.uid, 'notifications'), orderBy('timestamp', 'desc')) : null;
+  const notificationsQuery = useMemoFirebase(() => 
+    firestore ? query(collection(firestore, 'users', currentUser.uid, 'notifications'), orderBy('timestamp', 'desc')) : null,
+    [firestore, currentUser.uid]
+  );
   const { data: notifications } = useCollection<Notification>(notificationsQuery);
 
   const unreadCount = notifications?.filter((n) => !n.isRead).length || 0;
@@ -28,7 +31,7 @@ export function NotificationsPopover({ currentUser }: {currentUser: User}) {
       const unreadNotifications = notifications.filter(n => !n.isRead);
       for (const notification of unreadNotifications) {
         const notifRef = doc(firestore, 'users', currentUser.uid, 'notifications', notification.id);
-        await updateDoc(notifRef, { isRead: true });
+        updateDocumentNonBlocking(notifRef, { isRead: true });
       }
     }
   };

@@ -8,7 +8,7 @@ import { ProjectChat } from '@/components/project-chat';
 import type { Project } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare } from 'lucide-react';
-import { useCollection, useFirebase } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
 export default function NotifyHubDashboard() {
@@ -16,7 +16,10 @@ export default function NotifyHubDashboard() {
   
   const { firestore, user } = useFirebase();
 
-  const projectsQuery = firestore ? collection(firestore, 'projects') : null;
+  const projectsQuery = useMemoFirebase(() => 
+    firestore ? collection(firestore, 'projects') : null,
+    [firestore]
+  );
   const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
 
   useEffect(() => {

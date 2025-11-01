@@ -8,7 +8,7 @@ import type { Project, Task, TaskStatus } from '@/lib/data';
 import { TaskCard } from './task-card';
 import { PlusCircle } from 'lucide-react';
 import { NewTaskDialog } from './new-task-dialog';
-import { useCollection, useFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 
@@ -26,7 +26,7 @@ type TaskListProps = {
 
 export function TaskList({ project, currentUser }: TaskListProps) {
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
-  const { firestore, useMemoFirebase } = useFirebase();
+  const { firestore } = useFirebase();
 
   const tasksQuery = useMemoFirebase(() => {
     if (!firestore) return null;
