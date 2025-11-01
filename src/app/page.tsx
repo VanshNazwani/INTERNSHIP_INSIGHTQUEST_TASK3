@@ -9,7 +9,7 @@ import type { Project } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare, Loader2, FolderPlus } from 'lucide-react';
 import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { NewProjectDialog } from '@/components/new-project-dialog';
 import { useRouter } from 'next/navigation';
@@ -22,7 +22,7 @@ export default function NotifyHubDashboard() {
   const router = useRouter();
 
   const projectsQuery = useMemoFirebase(() => 
-    (firestore && user) ? collection(firestore, 'projects') : null,
+    (firestore && user) ? query(collection(firestore, 'projects'), where(`members.${user.uid}`, 'in', ['owner', 'member'])) : null,
     [firestore, user]
   );
   const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
