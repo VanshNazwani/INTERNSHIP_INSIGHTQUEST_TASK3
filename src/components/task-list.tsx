@@ -8,8 +8,8 @@ import type { Project, Task, TaskStatus, UserProfile } from '@/lib/data';
 import { TaskCard } from './task-card';
 import { PlusCircle } from 'lucide-react';
 import { NewTaskDialog } from './new-task-dialog';
-import { useCollection, useFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useFirebase, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { collection, doc, query, where, serverTimestamp, addDoc } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 type TaskListProps = {
@@ -41,7 +41,7 @@ export function TaskList({ project, currentUser }: TaskListProps) {
   const createNotification = (userId: string, message: string, referenceId: string, type: string) => {
     if (firestore) {
       const notificationsCol = collection(firestore, 'users', userId, 'notifications');
-      addDocumentNonBlocking(notificationsCol, {
+      addDoc(notificationsCol, {
         userId,
         message,
         referenceId,
@@ -109,7 +109,7 @@ export function TaskList({ project, currentUser }: TaskListProps) {
   const handleCreateTask = (title: string, description: string) => {
     if (firestore) {
       const tasksCol = collection(firestore, 'projects', project.id, 'tasks');
-      addDocumentNonBlocking(tasksCol, {
+      addDoc(tasksCol, {
         name: title,
         description,
         status: 'todo',

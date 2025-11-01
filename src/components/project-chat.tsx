@@ -9,8 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project, Message } from '@/lib/data';
-import { useCollection, useFirebase, addDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp, where } from 'firebase/firestore';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, serverTimestamp, where, addDoc } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 type ProjectChatProps = {
@@ -52,7 +52,7 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
     e.preventDefault();
     if (newMessage.trim() && firestore) {
       const messagesCol = collection(firestore, 'projects', project.id, 'chat_messages');
-      addDocumentNonBlocking(messagesCol, {
+      addDoc(messagesCol, {
         userId: currentUser.uid,
         content: newMessage,
         timestamp: serverTimestamp(),

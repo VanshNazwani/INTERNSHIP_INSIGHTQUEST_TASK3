@@ -8,8 +8,8 @@ import { ProjectChat } from '@/components/project-chat';
 import type { Project } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare, Loader2, FolderPlus } from 'lucide-react';
-import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { useCollection, useFirebase, useMemoFirebase } from '@/firebase';
+import { collection, query, where, addDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { NewProjectDialog } from '@/components/new-project-dialog';
 import { useRouter } from 'next/navigation';
@@ -46,10 +46,10 @@ export default function NotifyHubDashboard() {
     setSelectedProject(project || null);
   };
 
-  const handleCreateProject = (name: string, description: string) => {
+  const handleCreateProject = async (name: string, description: string) => {
     if (firestore && user) {
       const projectsCol = collection(firestore, 'projects');
-      addDocumentNonBlocking(projectsCol, {
+      await addDoc(projectsCol, {
         name,
         description,
         members: { [user.uid]: 'owner' }

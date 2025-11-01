@@ -30,8 +30,10 @@ export function NotificationsPopover({ currentUser }: {currentUser: User}) {
       // Mark all as read when closing
       const unreadNotifications = notifications.filter(n => !n.isRead);
       for (const notification of unreadNotifications) {
-        const notifRef = doc(firestore, 'users', currentUser.uid, 'notifications', notification.id);
-        updateDocumentNonBlocking(notifRef, { isRead: true });
+        if (notification.id) {
+            const notifRef = doc(firestore, 'users', currentUser.uid, 'notifications', notification.id);
+            updateDocumentNonBlocking(notifRef, { isRead: true });
+        }
       }
     }
   };

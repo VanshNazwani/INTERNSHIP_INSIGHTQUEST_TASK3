@@ -16,8 +16,8 @@ import { PreferencesDialog } from './preferences-dialog';
 import { NotificationsPopover } from './notifications-popover';
 import { AppSidebar } from './app-sidebar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import type { Project } from '@/lib/data';
 import { NewProjectDialog } from './new-project-dialog';
 import { AddMemberDialog } from './add-member-dialog';
@@ -43,10 +43,10 @@ export function AppHeader() {
     }
   };
 
-  const handleCreateProject = (name: string, description: string) => {
+  const handleCreateProject = async (name: string, description: string) => {
     if (firestore && user) {
       const projectsCol = collection(firestore, 'projects');
-      addDocumentNonBlocking(projectsCol, {
+      await addDoc(projectsCol, {
         name,
         description,
         members: { [user.uid]: 'owner' }
