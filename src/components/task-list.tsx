@@ -31,7 +31,6 @@ export function TaskList({ project, currentUser }: TaskListProps) {
   const projectUsersQuery = useMemoFirebase(() => {
     if (!firestore || !project.members || Object.keys(project.members).length === 0) return null;
     const memberUIDs = Object.keys(project.members);
-    if (memberUIDs.length === 0) return null;
     return query(collection(firestore, 'users'), where('id', 'in', memberUIDs));
   }, [firestore, project.members]);
 
@@ -59,13 +58,33 @@ export function TaskList({ project, currentUser }: TaskListProps) {
       updateDocumentNonBlocking(taskRef, { status });
 
       const task = getTaskById(taskId);
-      if (task?.assignedToId) {
-        createNotification(
-          task.assignedToId,
-          `Task "${task.name}" status changed to ${status}.`,
-          taskId,
-          'task_status_updated'
+      if (task) {
+        // Notify the assigned user
+        if (task.assignedToId) {
+          createNotification(
+            task.assignedToId,
+            `Task "${task.name}" status changed to ${status}.`,
+            taskId,
+            'task_status_updated'
+          );
+        }
+
+        // Notify project owners
+        const ownerIds = Object.keys(project.members).filter(
+          (id) => project.members[id] === 'owner'
         );
+
+        for (const ownerId of ownerIds) {
+          // Don't notify the owner if they are the one who was assigned the task (they got the other notification)
+          if (ownerId !== task.assignedToId) {
+            createNotification(
+              ownerId,
+              `Task "${task.name}" in project "${project.name}" was updated to ${status}.`,
+              taskId,
+              'task_status_updated'
+            );
+          }
+        }
       }
     }
   };
