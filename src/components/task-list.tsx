@@ -4,20 +4,13 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import type { Project, Task, TaskStatus } from '@/lib/data';
+import type { Project, Task, TaskStatus, UserProfile } from '@/lib/data';
 import { TaskCard } from './task-card';
 import { PlusCircle } from 'lucide-react';
 import { NewTaskDialog } from './new-task-dialog';
 import { useCollection, useFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, doc, query, where } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-
-type UserProfile = {
-  id: string;
-  username: string;
-  email: string;
-  avatarUrl?: string;
-}
 
 type TaskListProps = {
   project: Project;
@@ -42,8 +35,6 @@ export function TaskList({ project, currentUser }: TaskListProps) {
   }, [firestore, project.members]);
 
   const { data: projectMembers } = useCollection<UserProfile>(projectUsersQuery);
-  const { data: allUsers } = useCollection<UserProfile>(projectUsersQuery);
-
 
   const handleStatusChange = (taskId: string, status: TaskStatus) => {
     if (firestore) {
@@ -91,7 +82,6 @@ export function TaskList({ project, currentUser }: TaskListProps) {
                             key={task.id}
                             task={task}
                             projectMembers={projectMembers || []}
-                            allUsers={allUsers || []}
                             onStatusChange={handleStatusChange}
                             onAssign={handleAssign}
                         />

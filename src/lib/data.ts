@@ -1,11 +1,10 @@
 import type { Timestamp } from 'firebase/firestore';
-import { PlaceHolderImages } from "./placeholder-images";
 
-export type User = {
+export type UserProfile = {
   id: string;
-  name: string;
-  avatarUrl: string;
-  role: 'manager' | 'member';
+  username: string;
+  email: string;
+  avatarUrl?: string;
 };
 
 export type TaskStatus = 'todo' | 'inprogress' | 'done';

@@ -8,16 +8,18 @@ import { ProjectChat } from '@/components/project-chat';
 import type { Project } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare, Loader2, FolderPlus } from 'lucide-react';
-import { useCollection, useFirebase, useMemoFirebase, initiateAnonymousSignIn, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirebase, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { NewProjectDialog } from '@/components/new-project-dialog';
+import { useRouter } from 'next/navigation';
 
 export default function NotifyHubDashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   
-  const { firestore, user, isUserLoading, auth } = useFirebase();
+  const { firestore, user, isUserLoading } = useFirebase();
+  const router = useRouter();
 
   const projectsQuery = useMemoFirebase(() => 
     (firestore && user) ? collection(firestore, 'projects') : null,
@@ -25,6 +27,12 @@ export default function NotifyHubDashboard() {
   );
   const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
 
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [isUserLoading, user, router]);
+  
   useEffect(() => {
     if (projects && projects.length > 0 && !selectedProject) {
       setSelectedProject(projects[0]);
@@ -37,12 +45,6 @@ export default function NotifyHubDashboard() {
     const project = projects?.find((p) => p.id === projectId);
     setSelectedProject(project || null);
   };
-  
-  const handleLogin = () => {
-    if (auth) {
-      initiateAnonymousSignIn(auth);
-    }
-  }
 
   const handleCreateProject = (name: string, description: string) => {
     if (firestore && user) {
@@ -57,38 +59,13 @@ export default function NotifyHubDashboard() {
   };
 
 
-  if (isUserLoading || (user && projectsLoading)) {
+  if (isUserLoading || !user || projectsLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-
-  if (!user) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center bg-background">
-            <Card className="w-full max-w-sm">
-                <CardContent className="flex flex-col items-center justify-center p-10">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary mb-4">
-                        <path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M12 18C15.3137 18 18 15.3137 18 12C18 8.68629 15.3137 6 12 6C8.68629 6 6 8.68629 6 12C6 15.3137 8.68629 18 12 18Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M22 12C22 6.47715 17.5228 2 12 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    <h2 className="text-2xl font-bold">Welcome to NotifyHub</h2>
-                    <p className="text-muted-foreground mt-2 mb-6 text-center">
-                        Sign in to collaborate with your team.
-                    </p>
-                    <Button onClick={handleLogin} className="w-full">
-                        Sign In Anonymously
-                    </Button>
-                </CardContent>
-            </Card>
-        </div>
-    )
-  }
-
 
   return (
       <>

@@ -7,21 +7,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { CheckCircle2, Circle, Loader2, MoreVertical, UserPlus, ChevronsRight } from 'lucide-react';
-import type { Task, TaskStatus } from '@/lib/data';
+import type { Task, TaskStatus, UserProfile } from '@/lib/data';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { User as FirebaseUser } from 'firebase/auth';
-
-type UserProfile = {
-  id: string;
-  username: string;
-  email: string;
-  avatarUrl?: string;
-}
 
 type TaskCardProps = {
   task: Task;
   projectMembers: UserProfile[];
-  allUsers: UserProfile[];
   onStatusChange: (taskId: string, status: TaskStatus) => void;
   onAssign: (taskId: string, userId: string) => void;
 };
@@ -38,9 +29,9 @@ const statusVariants: Record<TaskStatus, 'default' | 'secondary' | 'outline'> = 
     todo: 'outline'
 }
 
-export function TaskCard({ task, projectMembers, onStatusChange, onAssign, allUsers }: TaskCardProps) {
-  const assignedUser = allUsers.find((u) => u.id === task.assignedToId);
-  const userInitials = assignedUser?.username.split(' ').map(n => n[0]).join('') || '?';
+export function TaskCard({ task, projectMembers, onStatusChange, onAssign }: TaskCardProps) {
+  const assignedUser = projectMembers.find((u) => u.id === task.assignedToId);
+  const userInitials = assignedUser?.username?.split(' ').map(n => n[0]).join('') || '?';
 
   return (
     <Card>
@@ -79,7 +70,7 @@ export function TaskCard({ task, projectMembers, onStatusChange, onAssign, allUs
                         <DropdownMenuItem key={member.id} onClick={() => onAssign(task.id, member.id)} disabled={task.assignedToId === member.id}>
                             <Avatar className="h-6 w-6 mr-2">
                                 <AvatarImage src={member.avatarUrl} alt={member.username} />
-                                <AvatarFallback>{member.username.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                <AvatarFallback>{member.username?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
                             <span>{member.username}</span>
                         </DropdownMenuItem>

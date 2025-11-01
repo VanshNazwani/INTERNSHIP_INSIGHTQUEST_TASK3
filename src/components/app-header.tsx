@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Settings, LogOut, ChevronDown, Menu } from 'lucide-react';
+import { Settings, LogOut, ChevronDown, Menu, UserPlus } from 'lucide-react';
 import { PreferencesDialog } from './preferences-dialog';
 import { NotificationsPopover } from './notifications-popover';
 import { AppSidebar } from './app-sidebar';
@@ -20,10 +20,12 @@ import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } f
 import { collection } from 'firebase/firestore';
 import type { Project } from '@/lib/data';
 import { NewProjectDialog } from './new-project-dialog';
+import { AddMemberDialog } from './add-member-dialog';
 
 export function AppHeader() {
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
   const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
+  const [isAddMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
   const { user, firestore, auth } = useFirebase();
 
   const projectsQuery = useMemoFirebase(() => 
@@ -96,6 +98,10 @@ export function AppHeader() {
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Preferences</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setAddMemberDialogOpen(true)}>
+                <UserPlus className="mr-2 h-4 w-4" />
+                <span>Add Members</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
@@ -109,6 +115,10 @@ export function AppHeader() {
         isOpen={isNewProjectDialogOpen}
         onOpenChange={setIsNewProjectDialogOpen}
         onCreateProject={handleCreateProject}
+      />
+      <AddMemberDialog
+        isOpen={isAddMemberDialogOpen}
+        onOpenChange={setAddMemberDialogOpen}
       />
     </>
   );
