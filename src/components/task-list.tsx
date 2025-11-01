@@ -36,8 +36,9 @@ export function TaskList({ project, currentUser }: TaskListProps) {
   const { data: tasks } = useCollection<Task>(tasksQuery);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !project.members || Object.keys(project.members).length === 0) return null;
+    if (!firestore || !project.members) return null;
     const memberUIDs = Object.keys(project.members);
+    if (memberUIDs.length === 0) return null; // Prevent empty 'in' query
     return query(collection(firestore, 'users'), where('id', 'in', memberUIDs));
   }, [firestore, project.members]);
   const { data: projectMembers } = useCollection<UserProfile>(usersQuery);
