@@ -60,7 +60,7 @@ export function AddMemberDialog({ isOpen, onOpenChange }: AddMemberDialogProps) 
       const projectRef = doc(firestore, 'projects', selectedProjectId);
 
       // Add user to project members
-      await updateDocumentNonBlocking(projectRef, {
+      updateDocumentNonBlocking(projectRef, {
         [`members.${userId}`]: 'member',
       });
 
@@ -134,3 +134,5 @@ export function AddMemberDialog({ isOpen, onOpenChange }: AddMemberDialogProps) 
     </Dialog>
   );
 }
+
+    
