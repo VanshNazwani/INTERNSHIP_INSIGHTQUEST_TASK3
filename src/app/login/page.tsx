@@ -8,22 +8,37 @@ import { Label } from '@/components/ui/label';
 import { useFirebase, initiateEmailSignIn } from '@/firebase';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { FirebaseError } from 'firebase/app';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const { auth, user, isUserLoading } = useFirebase();
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const handleLogin = () => {
     if (auth) {
-      initiateEmailSignIn(auth, email, password);
+      setError(null);
+      initiateEmailSignIn(auth, email, password, (err) => {
+        if (err) {
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+                setError('Invalid email or password. Please try again.');
+            } else {
+                setError(err.message);
+            }
+        }
+      });
     }
   };
   
   if (isUserLoading) {
-    return <div>Loading...</div>;
+    return (
+        <div className="flex h-screen w-full items-center justify-center bg-background">
+          <div>Loading...</div>
+        </div>
+    );
   }
   
   if (user) {
@@ -48,6 +63,7 @@ export default function LoginPage() {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button onClick={handleLogin} className="w-full">
             Login
           </Button>
