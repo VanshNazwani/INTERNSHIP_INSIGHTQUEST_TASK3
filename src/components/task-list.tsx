@@ -9,7 +9,7 @@ import { TaskCard } from './task-card';
 import { PlusCircle } from 'lucide-react';
 import { NewTaskDialog } from './new-task-dialog';
 import { useCollection, useFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 type UserProfile = {
@@ -36,12 +36,17 @@ export function TaskList({ project, currentUser }: TaskListProps) {
   const { data: tasks } = useCollection<Task>(tasksQuery);
 
   const usersQuery = useMemoFirebase(() => {
+    if (!firestore || !project.members || Object.keys(project.members).length === 0) return null;
+    const memberUIDs = Object.keys(project.members);
+    return query(collection(firestore, 'users'), where('id', 'in', memberUIDs));
+  }, [firestore, project.members]);
+  const { data: projectMembers } = useCollection<UserProfile>(usersQuery);
+
+  const allUsersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'users');
   }, [firestore]);
-  const { data: allUsers } = useCollection<UserProfile>(usersQuery);
-
-  const projectMembers = allUsers?.filter(user => project.members.includes(user.id)) || [];
+  const { data: allUsers } = useCollection<UserProfile>(allUsersQuery);
 
   const handleStatusChange = (taskId: string, status: TaskStatus) => {
     if (firestore) {
@@ -88,7 +93,7 @@ export function TaskList({ project, currentUser }: TaskListProps) {
                         <TaskCard
                             key={task.id}
                             task={task}
-                            projectMembers={projectMembers}
+                            projectMembers={projectMembers || []}
                             allUsers={allUsers || []}
                             onStatusChange={handleStatusChange}
                             onAssign={handleAssign}
@@ -97,6 +102,7 @@ export function TaskList({ project, currentUser }: TaskListProps) {
                 ) : (
                     <div className="text-center text-muted-foreground py-10">
                         <p>No tasks in this project yet.</p>
+                        <p className="text-sm mt-2">Click "New Task" to add one.</p>
                     </div>
                 )}
             </div>

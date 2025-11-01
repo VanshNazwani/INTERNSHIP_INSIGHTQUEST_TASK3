@@ -24,13 +24,14 @@ export type Message = {
   userId: string;
   content: string;
   timestamp: Timestamp;
+  projectId: string;
 };
 
 export type Project = {
   id:string;
   name: string;
   description: string;
-  members: string[];
+  members: { [key: string]: 'owner' | 'member' };
 };
 
 export type Notification = {

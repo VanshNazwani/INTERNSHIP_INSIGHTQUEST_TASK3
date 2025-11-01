@@ -16,12 +16,14 @@ import { PreferencesDialog } from './preferences-dialog';
 import { NotificationsPopover } from './notifications-popover';
 import { AppSidebar } from './app-sidebar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Project } from '@/lib/data';
+import { NewProjectDialog } from './new-project-dialog';
 
 export function AppHeader() {
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
+  const [isNewProjectDialogOpen, setIsNewProjectDialogOpen] = useState(false);
   const { user, firestore, auth } = useFirebase();
 
   const projectsQuery = useMemoFirebase(() => 
@@ -39,6 +41,18 @@ export function AppHeader() {
     }
   };
 
+  const handleCreateProject = (name: string, description: string) => {
+    if (firestore && user) {
+      const projectsCol = collection(firestore, 'projects');
+      addDocumentNonBlocking(projectsCol, {
+        name,
+        description,
+        members: { [user.uid]: 'owner' }
+      });
+    }
+    setIsNewProjectDialogOpen(false);
+  };
+
   return (
     <>
       <header className="flex h-16 items-center border-b bg-card px-4 md:px-6 shrink-0">
@@ -51,7 +65,7 @@ export function AppHeader() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="p-0 flex flex-col">
-                   <AppSidebar projects={projects || []} onSelectProject={() => {}} selectedProjectId={''} isSheet={true} />
+                   <AppSidebar projects={projects || []} onSelectProject={() => {}} selectedProjectId={''} onNewProject={() => setIsNewProjectDialogOpen(true)} isSheet={true} />
                 </SheetContent>
             </Sheet>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
@@ -91,6 +105,11 @@ export function AppHeader() {
         </div>
       </header>
       <PreferencesDialog isOpen={isPrefsOpen} onOpenChange={setIsPrefsOpen} />
+      <NewProjectDialog
+        isOpen={isNewProjectDialogOpen}
+        onOpenChange={setIsNewProjectDialogOpen}
+        onCreateProject={handleCreateProject}
+      />
     </>
   );
 }

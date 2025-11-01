@@ -67,7 +67,7 @@ service cloud.firestore {
      * @allow (get, list) - Any authenticated user can view project details and list projects.
      *   request.auth != null
      * @allow (create) - User 'alice' can create a project if they are added as a member with 'owner' role.
-     *   request.auth.uid == 'alice' && request.resource.data.members['alice'] == 'owner'
+     *   request.auth.uid == 'alice' && request.resource.data.members[request.auth.uid] == 'owner'
      * @allow (update, delete) - User 'alice' can update/delete a project if they are the owner.
      *   resource.data.members['alice'] == 'owner'
      * @deny (create) - User 'bob' cannot create a project without being listed in the 'members' map.
