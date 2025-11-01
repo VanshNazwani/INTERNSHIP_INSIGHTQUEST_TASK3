@@ -6,11 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useFirebase, addDocumentNonBlocking } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { collection, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 
 
 export default function SignupPage() {
@@ -29,21 +29,29 @@ export default function SignupPage() {
   
   const handleSignUp = async () => {
     if (auth && firestore) {
+      setError(null);
       try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
+        const newUser = userCredential.user;
 
         // Create user profile in Firestore
-        const userRef = doc(firestore, 'users', user.uid);
+        const userRef = doc(firestore, 'users', newUser.uid);
         await setDoc(userRef, {
-            id: user.uid,
+            id: newUser.uid,
             username: username,
-            email: user.email,
+            email: newUser.email,
         });
 
         // No need to redirect here, the useEffect will handle it
       } catch (error: any) {
-        setError(error.message);
+        if (error.code === 'auth/email-already-in-use') {
+            setError('This email is already in use. Please try another.');
+        } else if (error.code === 'auth/weak-password') {
+            setError('The password is too weak. It must be at least 6 characters long.');
+        }
+        else {
+            setError(error.message);
+        }
       }
     }
   };
@@ -64,15 +72,15 @@ export default function SignupPage() {
           <CardDescription>Enter your information to create an account.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid gap-2">
             <Label htmlFor="username">Username</Label>
             <Input id="username" type="text" placeholder="Priya Patel" required value={username} onChange={(e) => setUsername(e.target.value)} />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
+          <div className="grid gap-2">
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
