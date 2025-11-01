@@ -7,43 +7,36 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send } from 'lucide-react';
-import { useSocket } from '@/hooks/use-socket';
 import { cn } from '@/lib/utils';
-import type { Project, Message, User } from '@/lib/data';
-import { users } from '@/lib/data';
+import type { Project, Message } from '@/lib/data';
+import { useCollection, useFirebase, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 type ProjectChatProps = {
   project: Project;
-  currentUser: User;
+  currentUser: FirebaseUser;
 };
 
 export function ProjectChat({ project, currentUser }: ProjectChatProps) {
-  const { socket } = useSocket();
-  const [messages, setMessages] = useState<Message[]>(project.messages);
   const [newMessage, setNewMessage] = useState('');
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setMessages(project.messages);
-  }, [project.id, project.messages]);
+  const { firestore, useMemoFirebase } = useFirebase();
 
-  useEffect(() => {
-    if (!socket) return;
+  const messagesQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'projects', project.id, 'chat_messages'), orderBy('timestamp', 'asc'));
+  }, [firestore, project.id]);
 
-    socket.emit('joinProject', project.id);
+  const { data: messages } = useCollection<Message>(messagesQuery);
 
-    const handleNewMessage = (data: { projectId: string; message: Message }) => {
-      if (data.projectId === project.id) {
-        setMessages((prev) => [...prev, data.message]);
-      }
-    };
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
 
-    socket.on('newMessage', handleNewMessage);
-
-    return () => {
-      socket.off('newMessage', handleNewMessage);
-    };
-  }, [socket, project.id]);
+  const { data: users } = useCollection<any>(usersQuery);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -56,19 +49,18 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newMessage.trim() && socket) {
-      const message: Message = {
-        id: `msg-${Date.now()}`,
-        userId: currentUser.id,
-        text: newMessage,
-        timestamp: Date.now(),
-      };
-      socket.emit('sendMessage', { projectId: project.id, message });
+    if (newMessage.trim() && firestore) {
+      const messagesCol = collection(firestore, 'projects', project.id, 'chat_messages');
+      addDocumentNonBlocking(messagesCol, {
+        userId: currentUser.uid,
+        content: newMessage,
+        timestamp: serverTimestamp(),
+      });
       setNewMessage('');
     }
   };
 
-  const getUserById = (userId: string) => users.find((u) => u.id === userId);
+  const getUserById = (userId: string) => users?.find((u: any) => u.id === userId);
 
   return (
     <Card className="flex flex-col max-h-[calc(100vh-10rem)] h-full">
@@ -78,10 +70,10 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full" ref={scrollAreaRef}>
           <div className="p-6 space-y-4">
-            {messages.map((message) => {
+            {messages && messages.map((message) => {
               const user = getUserById(message.userId);
-              const isCurrentUser = message.userId === currentUser.id;
-              const userInitials = user ? user.name.split(' ').map(n => n[0]).join('') : '?';
+              const isCurrentUser = message.userId === currentUser.uid;
+              const userInitials = user ? user.username?.split(' ').map(n => n[0]).join('') : '?';
               
               return (
                 <div key={message.id} className={cn("flex items-start gap-3", isCurrentUser && "justify-end")}>
@@ -92,12 +84,12 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
                     </Avatar>
                   )}
                   <div className={cn("max-w-xs rounded-lg p-3 text-sm", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                    {!isCurrentUser && <p className="font-semibold text-xs mb-1">{user?.name}</p>}
-                    <p>{message.text}</p>
+                    {!isCurrentUser && <p className="font-semibold text-xs mb-1">{user?.username}</p>}
+                    <p>{message.content}</p>
                   </div>
                    {isCurrentUser && (
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.avatarUrl} />
+                       <AvatarImage src={user?.avatarUrl} />
                       <AvatarFallback>{userInitials}</AvatarFallback>
                     </Avatar>
                   )}

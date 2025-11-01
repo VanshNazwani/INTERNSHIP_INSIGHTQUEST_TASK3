@@ -5,45 +5,57 @@ import { AppSidebar } from '@/components/app-sidebar';
 import { AppHeader } from '@/components/app-header';
 import { TaskList } from '@/components/task-list';
 import { ProjectChat } from '@/components/project-chat';
-import { SocketProvider } from '@/context/socket-provider';
 import type { Project } from '@/lib/data';
-import { projects as initialProjects, users as allUsers } from '@/lib/data';
 import { Card, CardContent } from '@/components/ui/card';
 import { MessageSquare } from 'lucide-react';
+import { useCollection, useFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 export default function NotifyHubDashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
+  
+  const { firestore, user } = useFirebase();
+
+  const projectsQuery = firestore ? collection(firestore, 'projects') : null;
+  const { data: projects, isLoading: projectsLoading } = useCollection<Project>(projectsQuery);
 
   useEffect(() => {
     // On initial load, select the first project
-    if (initialProjects.length > 0) {
-      setSelectedProject(initialProjects[0]);
+    if (projects && projects.length > 0 && !selectedProject) {
+      setSelectedProject(projects[0]);
     }
-  }, []);
+  }, [projects, selectedProject]);
 
   const handleProjectSelect = (projectId: string) => {
-    const project = projects.find((p) => p.id === projectId);
+    const project = projects?.find((p) => p.id === projectId);
     setSelectedProject(project || null);
   };
   
-  const currentUser = allUsers[0]; // Assuming the current user is the first user for demo purposes
+  const currentUser = user;
+
+  if (projectsLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="text-2xl">Loading...</div>
+      </div>
+    );
+  }
+
 
   return (
-    <SocketProvider>
       <div className="flex h-screen bg-background text-foreground">
         <AppSidebar
-          projects={projects}
+          projects={projects || []}
           onSelectProject={handleProjectSelect}
           selectedProjectId={selectedProject?.id}
         />
         <div className="flex flex-1 flex-col">
-          <AppHeader currentUser={currentUser} />
+          <AppHeader />
           <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-            {selectedProject ? (
+            {selectedProject && currentUser ? (
               <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
                 <div className="xl:col-span-2 flex flex-col h-full">
-                   <TaskList project={selectedProject} setProjects={setProjects} currentUser={currentUser} />
+                   <TaskList project={selectedProject} currentUser={currentUser} />
                 </div>
                 <div className="flex flex-col">
                   <ProjectChat project={selectedProject} currentUser={currentUser} />
@@ -65,6 +77,5 @@ export default function NotifyHubDashboard() {
           </main>
         </div>
       </div>
-    </SocketProvider>
   );
 }

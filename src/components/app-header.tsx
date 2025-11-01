@@ -14,18 +14,21 @@ import {
 import { Settings, LogOut, ChevronDown, Menu } from 'lucide-react';
 import { PreferencesDialog } from './preferences-dialog';
 import { NotificationsPopover } from './notifications-popover';
-import type { User } from '@/lib/data';
 import { AppSidebar } from './app-sidebar';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { projects } from '@/lib/data';
+import { useFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
+import { useCollection } from '@/firebase';
+import type { Project } from '@/lib/data';
 
-type AppHeaderProps = {
-  currentUser: User;
-};
-
-export function AppHeader({ currentUser }: AppHeaderProps) {
+export function AppHeader() {
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
-  const userInitials = currentUser.name.split(' ').map(n => n[0]).join('');
+  const { user, firestore } = useFirebase();
+
+  const projectsQuery = firestore ? collection(firestore, 'projects') : null;
+  const { data: projects } = useCollection<Project>(projectsQuery);
+
+  const userInitials = user?.displayName?.split(' ').map(n => n[0]).join('') || '';
 
   return (
     <>
@@ -39,7 +42,7 @@ export function AppHeader({ currentUser }: AppHeaderProps) {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="p-0 flex flex-col">
-                   <AppSidebar projects={projects} onSelectProject={() => {}} selectedProjectId={''} isSheet={true} />
+                   <AppSidebar projects={projects || []} onSelectProject={() => {}} selectedProjectId={''} isSheet={true} />
                 </SheetContent>
             </Sheet>
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
@@ -51,15 +54,15 @@ export function AppHeader({ currentUser }: AppHeaderProps) {
             <h1 className="font-bold text-xl tracking-tight">NotifyHub</h1>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <NotificationsPopover currentUser={currentUser} />
+          {user && <NotificationsPopover currentUser={user} />}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 -mr-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={currentUser.avatarUrl} alt={currentUser.name} />
+                  <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || ''} />
                   <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
-                <span className="hidden md:inline">{currentUser.name}</span>
+                <span className="hidden md:inline">{user?.displayName}</span>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>

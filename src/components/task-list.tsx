@@ -1,84 +1,71 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSocket } from '@/hooks/use-socket';
-import type { Project, Task, TaskStatus, User } from '@/lib/data';
-import { users } from '@/lib/data';
+import type { Project, Task, TaskStatus } from '@/lib/data';
 import { TaskCard } from './task-card';
 import { PlusCircle } from 'lucide-react';
 import { NewTaskDialog } from './new-task-dialog';
+import { useCollection, useFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, doc } from 'firebase/firestore';
+import type { User as FirebaseUser } from 'firebase/auth';
+
+type UserProfile = {
+  id: string;
+  username: string;
+  email: string;
+  avatarUrl?: string;
+}
 
 type TaskListProps = {
   project: Project;
-  setProjects: React.Dispatch<React.SetStateAction<Project[]>>;
-  currentUser: User;
+  currentUser: FirebaseUser;
 };
 
-export function TaskList({ project, setProjects, currentUser }: TaskListProps) {
-  const { socket } = useSocket();
-  const [tasks, setTasks] = useState<Task[]>(project.tasks);
+export function TaskList({ project, currentUser }: TaskListProps) {
   const [isNewTaskDialogOpen, setIsNewTaskDialogOpen] = useState(false);
+  const { firestore, useMemoFirebase } = useFirebase();
 
-  const projectMembers = users.filter(user => project.members.includes(user.id));
+  const tasksQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'projects', project.id, 'tasks');
+  }, [firestore, project.id]);
 
-  useEffect(() => {
-    setTasks(project.tasks);
-  }, [project.id, project.tasks]);
+  const { data: tasks } = useCollection<Task>(tasksQuery);
 
-  useEffect(() => {
-    if (!socket) return;
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
+  const { data: allUsers } = useCollection<UserProfile>(usersQuery);
 
-    socket.emit('joinProject', project.id);
-
-    const handleTaskUpdate = (data: { projectId: string; task: Task }) => {
-      if (data.projectId === project.id) {
-        setTasks(prevTasks =>
-          prevTasks.map(t => (t.id === data.task.id ? data.task : t))
-        );
-        setProjects(prevProjects => prevProjects.map(p => {
-          if (p.id === data.projectId) {
-            return { ...p, tasks: p.tasks.map(t => t.id === data.task.id ? data.task : t) };
-          }
-          return p;
-        }))
-      }
-    };
-    
-    const handleNewTask = (data: { projectId: string; task: Task }) => {
-        if (data.projectId === project.id) {
-            setTasks(prevTasks => [...prevTasks, data.task]);
-            setProjects(prevProjects => prevProjects.map(p => {
-                if (p.id === data.projectId) {
-                    return { ...p, tasks: [...p.tasks, data.task] };
-                }
-                return p;
-            }));
-        }
-    };
-
-    socket.on('taskUpdated', handleTaskUpdate);
-    socket.on('taskCreated', handleNewTask);
-
-    return () => {
-      socket.off('taskUpdated', handleTaskUpdate);
-      socket.off('taskCreated', handleNewTask);
-    };
-  }, [socket, project.id, setProjects]);
+  const projectMembers = allUsers?.filter(user => project.members.includes(user.id)) || [];
 
   const handleStatusChange = (taskId: string, status: TaskStatus) => {
-    socket?.emit('updateTaskStatus', { projectId: project.id, taskId, status, updatedByUserId: currentUser.id });
+    if (firestore) {
+      const taskRef = doc(firestore, 'projects', project.id, 'tasks', taskId);
+      updateDocumentNonBlocking(taskRef, { status });
+    }
   };
 
   const handleAssign = (taskId: string, userId: string) => {
-    socket?.emit('assignTask', { projectId: project.id, taskId, userId, assignedByUserId: currentUser.id });
+    if (firestore) {
+      const taskRef = doc(firestore, 'projects', project.id, 'tasks', taskId);
+      updateDocumentNonBlocking(taskRef, { assignedToId: userId });
+    }
   };
 
   const handleCreateTask = (title: string, description: string) => {
-    if (socket) {
-      socket.emit('createTask', { projectId: project.id, title, description, createdByUserId: currentUser.id });
+    if (firestore) {
+      const tasksCol = collection(firestore, 'projects', project.id, 'tasks');
+      addDocumentNonBlocking(tasksCol, {
+        name: title,
+        description,
+        status: 'todo',
+        projectId: project.id
+      });
     }
     setIsNewTaskDialogOpen(false);
   };
@@ -96,12 +83,13 @@ export function TaskList({ project, setProjects, currentUser }: TaskListProps) {
       <CardContent className="flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full">
             <div className="p-6 space-y-4">
-                {tasks.length > 0 ? (
+                {tasks && tasks.length > 0 ? (
                     tasks.map(task => (
                         <TaskCard
                             key={task.id}
                             task={task}
                             projectMembers={projectMembers}
+                            allUsers={allUsers || []}
                             onStatusChange={handleStatusChange}
                             onAssign={handleAssign}
                         />

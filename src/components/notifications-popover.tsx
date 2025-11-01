@@ -1,45 +1,35 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { useSocket } from '@/hooks/use-socket';
-import { notifications as initialNotifications, type Notification, type User } from '@/lib/data';
+import { type Notification } from '@/lib/data';
 import { formatDistanceToNow } from 'date-fns';
+import { useCollection, useFirebase } from '@/firebase';
+import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 
 export function NotificationsPopover({ currentUser }: {currentUser: User}) {
-  const { socket } = useSocket();
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [isOpen, setIsOpen] = useState(false);
+  const { firestore } = useFirebase();
 
-  useEffect(() => {
-    if (!socket) return;
-    
-    socket.emit('joinUserChannel', currentUser.id);
+  const notificationsQuery = firestore ? query(collection(firestore, 'users', currentUser.uid, 'notifications'), orderBy('timestamp', 'desc')) : null;
+  const { data: notifications } = useCollection<Notification>(notificationsQuery);
 
-    const handleNotification = (notification: Notification) => {
-      setNotifications((prev) => [notification, ...prev]);
-    };
+  const unreadCount = notifications?.filter((n) => !n.isRead).length || 0;
 
-    socket.on('notification', handleNotification);
-
-    return () => {
-      socket.off('notification', handleNotification);
-    };
-  }, [socket, currentUser.id]);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const handleOpenChange = (open: boolean) => {
+  const handleOpenChange = async (open: boolean) => {
     setIsOpen(open);
-    if (!open) {
+    if (!open && firestore && notifications) {
       // Mark all as read when closing
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, read: true }))
-      );
+      const unreadNotifications = notifications.filter(n => !n.isRead);
+      for (const notification of unreadNotifications) {
+        const notifRef = doc(firestore, 'users', currentUser.uid, 'notifications', notification.id);
+        await updateDoc(notifRef, { isRead: true });
+      }
     }
   };
 
@@ -62,10 +52,10 @@ export function NotificationsPopover({ currentUser }: {currentUser: User}) {
         </div>
         <Separator />
         <ScrollArea className="h-96">
-          {notifications.length > 0 ? (
+          {notifications && notifications.length > 0 ? (
             notifications.map((notification) => (
               <div key={notification.id} className="p-4 hover:bg-secondary/50">
-                <p className="text-sm">{notification.text}</p>
+                <p className="text-sm">{notification.message}</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
                 </p>

@@ -7,14 +7,21 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from '@/components/ui/dropdown-menu';
 import { CheckCircle2, Circle, Loader2, MoreVertical, UserPlus, ChevronsRight } from 'lucide-react';
-import type { Task, TaskStatus, User } from '@/lib/data';
-import { users } from '@/lib/data';
+import type { Task, TaskStatus } from '@/lib/data';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { User as FirebaseUser } from 'firebase/auth';
 
+type UserProfile = {
+  id: string;
+  username: string;
+  email: string;
+  avatarUrl?: string;
+}
 
 type TaskCardProps = {
   task: Task;
-  projectMembers: User[];
+  projectMembers: UserProfile[];
+  allUsers: UserProfile[];
   onStatusChange: (taskId: string, status: TaskStatus) => void;
   onAssign: (taskId: string, userId: string) => void;
 };
@@ -31,15 +38,15 @@ const statusVariants: Record<TaskStatus, 'default' | 'secondary' | 'outline'> = 
     todo: 'outline'
 }
 
-export function TaskCard({ task, projectMembers, onStatusChange, onAssign }: TaskCardProps) {
-  const assignedUser = users.find((u) => u.id === task.assignedTo);
-  const userInitials = assignedUser?.name.split(' ').map(n => n[0]).join('') || '?';
+export function TaskCard({ task, projectMembers, onStatusChange, onAssign, allUsers }: TaskCardProps) {
+  const assignedUser = allUsers.find((u) => u.id === task.assignedToId);
+  const userInitials = assignedUser?.username.split(' ').map(n => n[0]).join('') || '?';
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-start justify-between pb-4">
         <div className="space-y-2">
-            <CardTitle className="text-base font-semibold leading-none tracking-tight">{task.title}</CardTitle>
+            <CardTitle className="text-base font-semibold leading-none tracking-tight">{task.name}</CardTitle>
             <Badge variant={statusVariants[task.status]} className="capitalize">{task.status}</Badge>
         </div>
         <DropdownMenu>
@@ -69,12 +76,12 @@ export function TaskCard({ task, projectMembers, onStatusChange, onAssign }: Tas
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                     {projectMembers.map(member => (
-                        <DropdownMenuItem key={member.id} onClick={() => onAssign(task.id, member.id)} disabled={task.assignedTo === member.id}>
+                        <DropdownMenuItem key={member.id} onClick={() => onAssign(task.id, member.id)} disabled={task.assignedToId === member.id}>
                             <Avatar className="h-6 w-6 mr-2">
-                                <AvatarImage src={member.avatarUrl} alt={member.name} />
-                                <AvatarFallback>{member.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                <AvatarImage src={member.avatarUrl} alt={member.username} />
+                                <AvatarFallback>{member.username.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
-                            <span>{member.name}</span>
+                            <span>{member.username}</span>
                         </DropdownMenuItem>
                     ))}
                 </DropdownMenuSubContent>
@@ -91,12 +98,12 @@ export function TaskCard({ task, projectMembers, onStatusChange, onAssign }: Tas
             <Tooltip>
               <TooltipTrigger asChild>
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={assignedUser.avatarUrl} alt={assignedUser.name} />
+                  <AvatarImage src={assignedUser.avatarUrl} alt={assignedUser.username} />
                   <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Assigned to {assignedUser.name}</p>
+                <p>Assigned to {assignedUser.username}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
