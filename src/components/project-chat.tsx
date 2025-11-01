@@ -10,7 +10,7 @@ import { Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Project, Message } from '@/lib/data';
 import { useCollection, useFirebase, addDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, serverTimestamp, where } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 type ProjectChatProps = {
@@ -32,9 +32,10 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
   const { data: messages } = useCollection<Message>(messagesQuery);
 
   const usersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
+    if (!firestore || !project.members || Object.keys(project.members).length === 0) return null;
+    const memberUIDs = Object.keys(project.members);
+    return query(collection(firestore, 'users'), where('id', 'in', memberUIDs));
+  }, [firestore, project.members]);
 
   const { data: users } = useCollection<any>(usersQuery);
 
@@ -55,6 +56,7 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
         userId: currentUser.uid,
         content: newMessage,
         timestamp: serverTimestamp(),
+        projectId: project.id,
       });
       setNewMessage('');
     }
@@ -84,13 +86,13 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
                     </Avatar>
                   )}
                   <div className={cn("max-w-xs rounded-lg p-3 text-sm", isCurrentUser ? "bg-primary text-primary-foreground" : "bg-muted")}>
-                    {!isCurrentUser && <p className="font-semibold text-xs mb-1">{user?.username}</p>}
+                    {!isCurrentUser && user && <p className="font-semibold text-xs mb-1">{user?.username}</p>}
                     <p>{message.content}</p>
                   </div>
                    {isCurrentUser && (
                     <Avatar className="h-8 w-8">
-                       <AvatarImage src={user?.avatarUrl} />
-                      <AvatarFallback>{userInitials}</AvatarFallback>
+                       <AvatarImage src={currentUser.photoURL || undefined} />
+                       <AvatarFallback>{currentUser.isAnonymous ? 'A' : currentUser.displayName?.charAt(0) || '?'}</AvatarFallback>
                     </Avatar>
                   )}
                 </div>

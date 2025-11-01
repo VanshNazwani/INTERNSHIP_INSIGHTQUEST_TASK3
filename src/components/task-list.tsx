@@ -35,19 +35,15 @@ export function TaskList({ project, currentUser }: TaskListProps) {
 
   const { data: tasks } = useCollection<Task>(tasksQuery);
 
-  const usersQuery = useMemoFirebase(() => {
-    if (!firestore || !project.members) return null;
+  const projectUsersQuery = useMemoFirebase(() => {
+    if (!firestore || !project.members || Object.keys(project.members).length === 0) return null;
     const memberUIDs = Object.keys(project.members);
-    if (memberUIDs.length === 0) return null; // Prevent empty 'in' query
     return query(collection(firestore, 'users'), where('id', 'in', memberUIDs));
   }, [firestore, project.members]);
-  const { data: projectMembers } = useCollection<UserProfile>(usersQuery);
 
-  const allUsersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'users');
-  }, [firestore]);
-  const { data: allUsers } = useCollection<UserProfile>(allUsersQuery);
+  const { data: projectMembers } = useCollection<UserProfile>(projectUsersQuery);
+  const { data: allUsers } = useCollection<UserProfile>(projectUsersQuery);
+
 
   const handleStatusChange = (taskId: string, status: TaskStatus) => {
     if (firestore) {
