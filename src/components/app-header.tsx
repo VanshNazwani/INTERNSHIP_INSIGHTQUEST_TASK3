@@ -22,15 +22,22 @@ import type { Project } from '@/lib/data';
 
 export function AppHeader() {
   const [isPrefsOpen, setIsPrefsOpen] = useState(false);
-  const { user, firestore } = useFirebase();
+  const { user, firestore, auth } = useFirebase();
 
   const projectsQuery = useMemoFirebase(() => 
-    firestore ? collection(firestore, 'projects') : null, 
-    [firestore]
+    (firestore && user) ? collection(firestore, 'projects') : null, 
+    [firestore, user]
   );
   const { data: projects } = useCollection<Project>(projectsQuery);
 
-  const userInitials = user?.displayName?.split(' ').map(n => n[0]).join('') || user?.email?.charAt(0).toUpperCase() || '?';
+  const userInitials = user?.isAnonymous ? 'A' : user?.displayName?.split(' ').map(n => n[0]).join('') || user?.email?.charAt(0).toUpperCase() || '?';
+  const userDisplayName = user?.isAnonymous ? 'Anonymous User' : user?.displayName || user?.email;
+
+  const handleLogout = () => {
+    if (auth) {
+      auth.signOut();
+    }
+  };
 
   return (
     <>
@@ -61,10 +68,10 @@ export function AppHeader() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 -mr-2">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={user?.photoURL || undefined} alt={user?.displayName || ''} />
+                  <AvatarImage src={user?.photoURL || undefined} alt={userDisplayName || ''} />
                   <AvatarFallback>{userInitials}</AvatarFallback>
                 </Avatar>
-                <span className="hidden md:inline">{user?.displayName || user?.email}</span>
+                <span className="hidden md:inline">{userDisplayName}</span>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </Button>
             </DropdownMenuTrigger>
@@ -75,7 +82,7 @@ export function AppHeader() {
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Preferences</span>
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 <span>Log out</span>
               </DropdownMenuItem>
