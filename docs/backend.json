@@ -1,0 +1,280 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user in the KarmaSphere application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's username."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "notificationPreferences": {
+          "type": "string",
+          "description": "User preference for notification delivery.  Could be 'in-app', 'email', or 'both'."
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email"
+      ]
+    },
+    "Project": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Project",
+      "type": "object",
+      "description": "Represents a project within the KarmaSphere application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Project entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the project."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the project."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a task within a project.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task entity."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Reference to Project. (Relationship: Project 1:N Task)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the task."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the task."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the task (e.g., 'To Do', 'In Progress', 'Completed')."
+        },
+        "assignedToId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Task).  ID of the user assigned to this task."
+        }
+      },
+      "required": [
+        "id",
+        "projectId",
+        "name",
+        "status"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a chat message within a project's chat room.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatMessage entity."
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Reference to Project. (Relationship: Project 1:N ChatMessage).  The ID of the project this message belongs to."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N ChatMessage).  The ID of the user who sent the message."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the chat message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp of when the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "projectId",
+        "userId",
+        "content",
+        "timestamp"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Notification entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Notification). The ID of the user the notification is for."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of notification (e.g., 'task_assigned', 'task_status_updated')."
+        },
+        "message": {
+          "type": "string",
+          "description": "The message content of the notification."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp of when the notification was created.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "Indicates whether the notification has been read by the user."
+        },
+        "referenceId": {
+          "type": "string",
+          "description": "Reference to another entity. This could be a taskId, projectId, or chatMessageId, depending on the Notification 'type'."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "type",
+        "message",
+        "timestamp",
+        "isRead"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. Each user can only access their own profile data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}",
+        "definition": {
+          "entityName": "Project",
+          "schema": {
+            "$ref": "#/backend/entities/Project"
+          },
+          "description": "Stores project data. Includes a 'members' map for authorization: {uid: role}. Defines project access permissions.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The unique identifier of the project."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Stores tasks associated with a specific project. Includes denormalized 'projectId' for authorization independence.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The unique identifier of the project."
+            },
+            {
+              "name": "taskId",
+              "description": "The unique identifier of the task."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/projects/{projectId}/chat_messages/{chatMessageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores chat messages for each project. Includes denormalized 'projectId' and 'userId' for authorization independence.",
+          "params": [
+            {
+              "name": "projectId",
+              "description": "The unique identifier of the project."
+            },
+            {
+              "name": "chatMessageId",
+              "description": "The unique identifier of the chat message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Stores notifications for each user. Each user can only access their own notifications.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique identifier of the notification."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to support the KarmaSphere application's core features, emphasizing real-time communication and activity updates. The structure prioritizes authorization independence, clarity, and scalability, following the principles outlined in the prompt. Path-based ownership is used where appropriate. A membership map is employed for collaborative data access, and denormalization is implemented to avoid complex `get()` calls in security rules.\n\nSpecifically:\n\n*   `/users/{userId}`: Stores user profiles.  This follows the private data pattern, where each user can only access their own profile data.\n*   `/projects/{projectId}`: Stores project data.  This collection will store projects. The project document includes a `members` map which lists users with access to this project and their roles.\n*   `/projects/{projectId}/tasks/{taskId}`: Stores tasks associated with a specific project. The projectId is denormalized into each task document for security rule simplicity and authorization independence.\n*   `/projects/{projectId}/chat_messages/{chatMessageId}`: Stores chat messages for each project. The projectId and userId are denormalized into each message for security rule simplicity and authorization independence.\n*   `/users/{userId}/notifications/{notificationId}`: Stores notifications for each user. This structure follows the private data pattern, where each user can only access their own notifications.\n\nThis structure supports the required QAPs:\n\n*   Secure listing: Each collection is designed with homogeneous security postures, allowing for secure list operations. For example, listing tasks within a project is secured by verifying membership in the project's `members` map.\n*   Authorization Independence: Denormalization of authorization data (e.g., the `members` map in projects) avoids the need for `get()` calls in security rules, ensuring atomic operations and simplifying debugging."
+  }
+}

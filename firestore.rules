@@ -1,0 +1,173 @@
+/**
+ * @fileoverview Firestore Security Rules for KarmaSphere.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user-specific data
+ * (profiles, notifications). It utilizes a role-based access control (RBAC)
+ * model for projects, where project membership determines authorization.
+ * Denormalization is used extensively to improve rule performance.
+ *
+ * Data Structure:
+ * - /users/{userId}: User profiles, accessible only to the user themselves.
+ * - /projects/{projectId}: Project data, with access controlled by a 'members' map
+ *   containing user IDs and their roles within the project.
+ * - /projects/{projectId}/tasks/{taskId}: Tasks associated with projects, inheriting
+ *   access control from the parent project via the denormalized 'projectId' field.
+ * - /projects/{projectId}/chat_messages/{chatMessageId}: Chat messages within projects,
+ *   also inheriting access control from the parent project via the denormalized
+ *   'projectId' and 'userId' fields.
+ * - /users/{userId}/notifications/{notificationId}: Notifications for users,
+ *   accessible only to the user themselves.
+ *
+ * Key Security Decisions:
+ * - Users can only read and write their own profile and notification data.
+ * - Project access is managed through a 'members' map on each project document.
+ * - Listing operations are generally allowed for authorized users within their
+ *   respective data scopes (e.g., listing tasks within a project).
+ *
+ * Denormalization for Authorization:
+ * - Project membership is denormalized into the 'members' map on each
+ *   /projects/{projectId} document.
+ * - projectId is denormalized into each /projects/{projectId}/tasks/{taskId} and
+ *   /projects/{projectId}/chat_messages/{chatMessageId} document.
+ * - userId is denormalized into each /projects/{projectId}/chat_messages/{chatMessageId} and /users/{userId}/notifications/{notificationId} document.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user profile data. Users can only read and write their own profiles.
+     * @path /users/{userId}
+     * @allow (create) - User 'alice' with ID 'alice' can create their profile.
+     *   request.auth.uid == 'alice' && request.resource.data.id == 'alice'
+     * @allow (get, update, delete) - User 'alice' with ID 'alice' can read/update/delete their profile.
+     *   request.auth.uid == 'alice'
+     * @deny (create) - User 'bob' cannot create a profile for 'alice'.
+     *   request.auth.uid == 'bob' && request.resource.data.id == 'alice'
+     * @principle Enforces document ownership for writes, restricts access to a user's own data.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id.id == resource.data.id.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to project data. Access is role-based, determined by the 'members' map.
+     * @path /projects/{projectId}
+     * @allow (get, list) - Any authenticated user can view project details and list projects.
+     *   request.auth != null
+     * @allow (create) - User 'alice' can create a project if they are added as a member with 'owner' role.
+     *   request.auth.uid == 'alice' && request.resource.data.members['alice'] == 'owner'
+     * @allow (update, delete) - User 'alice' can update/delete a project if they are the owner.
+     *   resource.data.members['alice'] == 'owner'
+     * @deny (create) - User 'bob' cannot create a project without being listed in the 'members' map.
+     *   request.auth.uid == 'bob' && request.resource.data.members['bob'] == null
+     * @principle Enforces role-based access control, allows listing, validates access using 'members' map.
+     */
+    match /projects/{projectId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      
+      function isProjectOwner() {
+        return isSignedIn() && resource.data.members[request.auth.uid] == 'owner';
+      }
+      function canCreateProject() {
+          return isSignedIn() && request.resource.data.members[request.auth.uid] == 'owner';
+      }
+      allow get, list: if isSignedIn();
+      allow create: if canCreateProject();
+      allow update: if isProjectOwner() && resource != null;
+      allow delete: if isProjectOwner() && resource != null;
+    }
+
+    /**
+     * @description Controls access to task data within a project. Access is inherited from the parent project's 'members' map.
+     * @path /projects/{projectId}/tasks/{taskId}
+     * @allow (get, list) - User 'alice' can read/list tasks if they are a member of the parent project.
+     *   get(/databases/$(database)/documents/projects/$(projectId)).data.members['alice'] != null
+     * @allow (create) - User 'alice' can create a task if they are a member of the parent project and projectId matches.
+     *   get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.members['alice'] != null && request.resource.data.projectId == projectId
+     * @allow (update, delete) - User 'alice' can update/delete a task if they are a member of the parent project.
+     *   get(/databases/$(database)/documents/projects/$(resource.data.projectId)).data.members['alice'] != null
+     * @deny (create) - User 'bob' cannot create a task in project 'proj1' if they are not a member of that project.
+     *   get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.members['bob'] == null
+     * @principle Enforces access control inheritance, validates 'projectId' on create, uses 'get()' for parent access.
+     */
+    match /projects/{projectId}/tasks/{taskId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isProjectMember(projectId) {
+        return isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.members[request.auth.uid] != null;
+      }
+      allow get, list: if isProjectMember(projectId);
+      allow create: if isProjectMember(request.resource.data.projectId) && request.resource.data.projectId == projectId;
+      allow update: if isProjectMember(resource.data.projectId);
+      allow delete: if isProjectMember(resource.data.projectId);
+    }
+
+    /**
+     * @description Controls access to chat messages within a project. Access is inherited from the parent project's 'members' map.
+     * @path /projects/{projectId}/chat_messages/{chatMessageId}
+     * @allow (get, list) - User 'alice' can read/list messages if they are a member of the parent project.
+     *   get(/databases/$(database)/documents/projects/$(projectId)).data.members['alice'] != null
+     * @allow (create) - User 'alice' can create a message if they are a member of the parent project and projectId & userId matches.
+     *   get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.members['alice'] != null && request.resource.data.projectId == projectId && request.resource.data.userId == request.auth.uid
+     * @allow (update, delete) - No updates or deletes allowed for chat messages.
+     *   false
+     * @deny (create) - User 'bob' cannot create a message in project 'proj1' if they are not a member of that project.
+     *   get(/databases/$(database)/documents/projects/$(request.resource.data.projectId)).data.members['bob'] == null
+     * @principle Enforces access control inheritance, validates 'projectId' and 'userId' on create, disallows updates/deletes.
+     */
+    match /projects/{projectId}/chat_messages/{chatMessageId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isProjectMember(projectId) {
+        return isSignedIn() && get(/databases/$(database)/documents/projects/$(projectId)).data.members[request.auth.uid] != null;
+      }
+      allow get, list: if isProjectMember(projectId);
+      allow create: if isProjectMember(request.resource.data.projectId)
+                      && request.resource.data.projectId == projectId
+                      && request.resource.data.userId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to user-specific notifications. Users can only read and write their own notifications.
+     * @path /users/{userId}/notifications/{notificationId}
+     * @allow (create) - User 'alice' with ID 'alice' can create a notification.
+     *   request.auth.uid == 'alice' && request.resource.data.userId == 'alice'
+     * @allow (get, update, delete) - User 'alice' with ID 'alice' can read/update/delete their notification.
+     *   request.auth.uid == 'alice'
+     * @deny (create) - User 'bob' cannot create a notification for 'alice'.
+     *   request.auth.uid == 'bob' && request.resource.data.userId == 'alice'
+     * @principle Enforces document ownership for writes, restricts access to a user's own data.
+     */
+    match /users/{userId}/notifications/{notificationId} {
+      function isOwner(userId) {
+        return request.auth != null && request.auth.uid == userId;
+      }
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}
