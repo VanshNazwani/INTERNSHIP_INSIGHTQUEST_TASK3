@@ -1,3 +1,5 @@
+import { PlaceHolderImages } from "./placeholder-images";
+
 export type User = {
   id: string;
   name: string;
@@ -38,10 +40,10 @@ export type Notification = {
 };
 
 export const users: User[] = [
-  { id: 'user-1', name: 'Vansh Nazwani', avatarUrl: 'https://picsum.photos/seed/101/40/40', role: 'manager' },
-  { id: 'user-2', name: 'Rohan Sharma', avatarUrl: 'https://picsum.photos/seed/102/40/40', role: 'member' },
-  { id: 'user-3', name: 'Anjali Singh', avatarUrl: 'https://picsum.photos/seed/103/40/40', role: 'member' },
-  { id: 'user-4', name: 'Vikram Kumar', avatarUrl: 'https://picsum.photos/seed/104/40/40', role: 'manager' },
+  { id: 'user-1', name: 'Vansh Nazwani', avatarUrl: PlaceHolderImages.find(p => p.id === 'user1')?.imageUrl!, role: 'manager' },
+  { id: 'user-2', name: 'Rohan Sharma', avatarUrl: PlaceHolderImages.find(p => p.id === 'user2')?.imageUrl!, role: 'member' },
+  { id: 'user-3', name: 'Anjali Singh', avatarUrl: PlaceHolderImages.find(p => p.id === 'user3')?.imageUrl!, role: 'member' },
+  { id: 'user-4', name: 'Vikram Kumar', avatarUrl: PlaceHolderImages.find(p => p.id === 'user4')?.imageUrl!, role: 'manager' },
 ];
 
 export let projects: Project[] = [

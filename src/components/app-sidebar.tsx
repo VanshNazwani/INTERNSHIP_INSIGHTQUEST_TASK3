@@ -6,16 +6,22 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Briefcase, Dot } from 'lucide-react';
 import type { Project } from '@/lib/data';
 import { cn } from '@/lib/utils';
+import { usePathname } from 'next/navigation';
 
 type AppSidebarProps = {
   projects: Project[];
   onSelectProject: (projectId: string) => void;
   selectedProjectId?: string;
+  isSheet?: boolean;
 };
 
-export function AppSidebar({ projects, onSelectProject, selectedProjectId }: AppSidebarProps) {
+export function AppSidebar({ projects, onSelectProject, selectedProjectId, isSheet = false }: AppSidebarProps) {
+  const pathname = usePathname();
+  
+  const Component = isSheet ? 'div' : 'aside';
+
   return (
-    <aside className="w-64 flex-col border-r bg-card hidden md:flex">
+    <Component className={cn("flex-col border-r bg-card", isSheet ? "w-full flex" : "w-64 hidden md:flex")}>
       <div className="flex h-16 items-center border-b px-6">
         <h2 className="font-semibold tracking-tight text-lg">Projects</h2>
       </div>
@@ -41,6 +47,6 @@ export function AppSidebar({ projects, onSelectProject, selectedProjectId }: App
           </ul>
         </nav>
       </ScrollArea>
-    </aside>
+    </Component>
   );
 }

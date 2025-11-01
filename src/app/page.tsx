@@ -41,11 +41,11 @@ export default function NotifyHubDashboard() {
           <AppHeader currentUser={currentUser} />
           <main className="flex-1 overflow-y-auto p-4 lg:p-8">
             {selectedProject ? (
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-full">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
                 <div className="xl:col-span-2 flex flex-col h-full">
                    <TaskList project={selectedProject} setProjects={setProjects} currentUser={currentUser} />
                 </div>
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col">
                   <ProjectChat project={selectedProject} currentUser={currentUser} />
                 </div>
               </div>

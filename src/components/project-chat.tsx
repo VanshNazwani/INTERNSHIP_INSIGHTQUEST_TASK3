@@ -71,7 +71,7 @@ export function ProjectChat({ project, currentUser }: ProjectChatProps) {
   const getUserById = (userId: string) => users.find((u) => u.id === userId);
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="flex flex-col max-h-[calc(100vh-10rem)] h-full">
       <CardHeader>
         <CardTitle>Project Chat</CardTitle>
       </CardHeader>

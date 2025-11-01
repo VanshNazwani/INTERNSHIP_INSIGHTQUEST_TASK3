@@ -9,6 +9,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { CheckCircle2, Circle, Loader2, MoreVertical, UserPlus, ChevronsRight } from 'lucide-react';
 import type { Task, TaskStatus, User } from '@/lib/data';
 import { users } from '@/lib/data';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 type TaskCardProps = {
   task: Task;
@@ -35,14 +37,14 @@ export function TaskCard({ task, projectMembers, onStatusChange, onAssign }: Tas
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between pb-2">
-        <div className="space-y-1.5">
+      <CardHeader className="flex flex-row items-start justify-between pb-4">
+        <div className="space-y-2">
             <CardTitle className="text-base font-semibold leading-none tracking-tight">{task.title}</CardTitle>
             <Badge variant={statusVariants[task.status]} className="capitalize">{task.status}</Badge>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Button variant="ghost" size="icon" className="-my-2 -mr-2 h-8 w-8">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -68,7 +70,11 @@ export function TaskCard({ task, projectMembers, onStatusChange, onAssign }: Tas
                 <DropdownMenuSubContent>
                     {projectMembers.map(member => (
                         <DropdownMenuItem key={member.id} onClick={() => onAssign(task.id, member.id)} disabled={task.assignedTo === member.id}>
-                            {member.name}
+                            <Avatar className="h-6 w-6 mr-2">
+                                <AvatarImage src={member.avatarUrl} alt={member.name} />
+                                <AvatarFallback>{member.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <span>{member.name}</span>
                         </DropdownMenuItem>
                     ))}
                 </DropdownMenuSubContent>
@@ -76,22 +82,24 @@ export function TaskCard({ task, projectMembers, onStatusChange, onAssign }: Tas
           </DropdownMenuContent>
         </DropdownMenu>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-4">
         <p className="text-sm text-muted-foreground">{task.description}</p>
       </CardContent>
-      <CardFooter className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-            {statusIcons[task.status]}
-            <span className="text-xs text-muted-foreground capitalize">{task.status}</span>
-        </div>
+      <CardFooter className="flex justify-end items-center">
         {assignedUser ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">{assignedUser.name}</span>
-            <Avatar className="h-6 w-6">
-              <AvatarImage src={assignedUser.avatarUrl} alt={assignedUser.name} />
-              <AvatarFallback>{userInitials}</AvatarFallback>
-            </Avatar>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={assignedUser.avatarUrl} alt={assignedUser.name} />
+                  <AvatarFallback>{userInitials}</AvatarFallback>
+                </Avatar>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Assigned to {assignedUser.name}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
             <span className="text-xs text-muted-foreground italic">Unassigned</span>
         )}
