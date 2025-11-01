@@ -9,7 +9,7 @@ import { TaskCard } from './task-card';
 import { PlusCircle } from 'lucide-react';
 import { NewTaskDialog } from './new-task-dialog';
 import { useCollection, useFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, serverTimestamp } from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
 
 type TaskListProps = {
@@ -31,15 +31,42 @@ export function TaskList({ project, currentUser }: TaskListProps) {
   const projectUsersQuery = useMemoFirebase(() => {
     if (!firestore || !project.members || Object.keys(project.members).length === 0) return null;
     const memberUIDs = Object.keys(project.members);
+    if (memberUIDs.length === 0) return null;
     return query(collection(firestore, 'users'), where('id', 'in', memberUIDs));
   }, [firestore, project.members]);
 
   const { data: projectMembers } = useCollection<UserProfile>(projectUsersQuery);
+  
+  const getTaskById = (taskId: string) => tasks?.find(t => t.id === taskId);
+
+  const createNotification = (userId: string, message: string, referenceId: string, type: string) => {
+    if (firestore) {
+      const notificationsCol = collection(firestore, 'users', userId, 'notifications');
+      addDocumentNonBlocking(notificationsCol, {
+        userId,
+        message,
+        referenceId,
+        type,
+        timestamp: Date.now(),
+        isRead: false,
+      });
+    }
+  };
 
   const handleStatusChange = (taskId: string, status: TaskStatus) => {
     if (firestore) {
       const taskRef = doc(firestore, 'projects', project.id, 'tasks', taskId);
       updateDocumentNonBlocking(taskRef, { status });
+
+      const task = getTaskById(taskId);
+      if (task?.assignedToId) {
+        createNotification(
+          task.assignedToId,
+          `Task "${task.name}" status changed to ${status}.`,
+          taskId,
+          'task_status_updated'
+        );
+      }
     }
   };
 
@@ -47,6 +74,16 @@ export function TaskList({ project, currentUser }: TaskListProps) {
     if (firestore) {
       const taskRef = doc(firestore, 'projects', project.id, 'tasks', taskId);
       updateDocumentNonBlocking(taskRef, { assignedToId: userId });
+
+      const task = getTaskById(taskId);
+      if (task) {
+         createNotification(
+          userId,
+          `You have been assigned to task "${task.name}".`,
+          taskId,
+          'task_assigned'
+        );
+      }
     }
   };
 
